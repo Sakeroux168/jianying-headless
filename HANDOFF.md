@@ -17,6 +17,11 @@
 规则：只有「白名单」一行的效果可以无界面导出。
 「要会员」和「待确认」里的效果，一律拒绝导出。
 
+名字和代码里的对应：导入的效果，代码里的名字就是剪映里的名字，
+  例如 transition/摇镜、effect/聚光灯（见本地效果库 catalog.json）。
+  原作者自带的几个用英文：叠化=transition/dissolve，轻微抖动=effect/light-shake，
+  圆形/矩形/线性/镜面/星形/爱心蒙版=mask/circle、rectangle、line、mirror、star、heart。
+
 
 ## 二、背景
 
@@ -38,6 +43,7 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
 - C++ 编译器：E:\Dev\VSBuildTools（bridge\windows\build.bat 默认用它）
 - 本地语音识别：E:\Dev\asr-venv（FunASR），模型在 E:\Dev\modelscope-cache
 - 工作目录：E:\Dev\jianying-work（路径要短，见第六节）
+- 本地效果库：E:\项目文件\本地效果库（导入的效果都在这里，不进 GitHub）
 
 
 ## 四、已完成（都在剪映里验收过，回读校验通过）
@@ -78,6 +84,22 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
 
 8. Skill 脚本读写文本统一用 UTF-8（Windows 默认是 GBK，会报错）。
 
+9. 效果导入工具：tools/import_effects.py
+   用户把要用的转场、特效拖进「效果导入」草稿（让剪映下载），退出剪映，运行：
+     python tools\import_effects.py
+   工具会：读草稿里的转场和画面特效 → 从剪映缓存复制资源包到本地效果库
+   → 记录素材模板和参数 → 把新名字追加到第一节「待确认」
+   → 生成并发布「导入测试-月日时分」草稿供用户验收。
+   - 本地效果库：E:\项目文件\本地效果库（packages\ 资源包，catalog.json 登记表，work\ 测试构建）。
+     位置记在 %LOCALAPPDATA%\jianying-headless\config.json；--library 可改。
+     效果库不进 GitHub（剪映资源不能分发）。
+   - 引擎改动：native_resources.catalog() 叠加效果库，已审查的条目优先；
+     剪映保存后路径改指缓存，verify_binding 接受记录的 native_cache 位置并逐字节核对。
+     转场 / 特效名字改为按目录识别；特效参数按各自 adjust_params 读取
+     （计划里写去掉 effects_adjust_ 前缀的短名，例如 speed、volume）。
+   - 已验收：摇镜、左移弹动、模糊放大、推远 II、无缝转场、聚光灯、渐渐放大、多屏球形、
+     火光包围、流光暗角、抖动放大（11 个），保存后回读通过。
+
 
 ## 五、未完成
 
@@ -102,43 +124,12 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
      在 runtime_profiles.EXPORT_PROFILES 里登记 Windows 配置。
    - 做好之前，成片用 ui-export 或 export --backend windows-ffmpeg。
 
-2. 更多效果（可做）
-   第一节里除了叠化、6 种蒙版、轻微抖动，其余 10 个效果资源已在本机缓存，
-   但代码还不认识，build 会拒绝。
-   效果 ID：
-     摇镜 7305969268259033609
-     左移弹动 7312690473108247078
-     模糊放大 7301280654015074842
-     推远II 7360987817066893862
-     无缝转场 7695311799868181822
-     聚光灯 7399493048838786344
-     渐渐放大 7399496101104995584
-     多屏球形 7548426771805343003
-     火光包围 7399492277615332623
-     流光暗角 7665341904963554584
-   它们的参数模板在解密快照里：
-     E:\Dev\jianying-work\tests\inspect-220702\社保福利-无头剪辑v1.json
-     （materials.transitions 和 materials.video_effects）
-   新增一个效果要做：
-   - 资源条目：files = native_resources.tree_manifest(缓存目录)，
-     tree_sha256 = manifest_hash(files)。
-     结构参考 native-resource-catalog.json 里的 transition/dissolve（只有 material）
-     和 effect/light-shake（material、usage、track_template、segment_template）。
-     现在的 Windows 覆盖文件只能改已有的条目，新增条目要扩展 native_resources.catalog() 的合并逻辑。
-   - 登记名字：转场加到 native_effects.TRANSITIONS，
-     画面特效加到 native_visual_effects.NAMES['effect']，
-     并核对参数和 adjust_params 的对应关系。
-   - 要会员的效果不能加（不解锁、不伪造授权）。
-   - 每个效果都要发布测试草稿，让用户在剪映里看效果、保存、重开，再用 verify 回读。
-   - 建议先做一个「批量登记」工具，别一个个手写：
-     用户在剪映里把一批效果拖进同一个草稿（让剪映下载到缓存）
-     → 工具解密这个草稿，读出里面所有转场 / 特效 / 滤镜的素材模板和缓存目录
-     → 自动生成资源条目、计算文件指纹、登记名字
-     → 自动生成一个包含这批效果的测试草稿，用户一次看完。
-     新效果自动进「待确认」，用户确认免费后才挪进白名单。
-   - 用户决定：按需登记，用到哪个加哪个；不批量下载剪映的全部效果。
-     用户流程：在任意草稿里拖入要用的效果 → 退出剪映 → 告诉你草稿名和效果名
-     → 你登记并生成测试草稿 → 用户验收后写进白名单或「要会员」。
+2. 效果导入的后续（可做）
+   导入工具已经可用（见第四节第 9 条）。还没做的：
+   - 滤镜、贴纸、花字、文字模板：工具只导入转场（materials.transitions）和画面特效
+     （materials.video_effects），其他类型列在「暂不支持」里。
+   - 导入的特效统一用「轻微抖动」的轨道和片段模板，转场按居中重叠处理；
+     目前导入的 11 个都验收过，但新类型效果仍要看测试草稿确认。
 
 3. 复合片段（嵌套时间线）：native_compound.SUPPORTED_PROFILES 里没有 Windows。
    上游在 macOS 上也只是实验阶段。
