@@ -24,7 +24,8 @@ def transition_audit(plan, assets):
             value = spec['transition_out']
             require(isinstance(value, dict) and not set(value) - {'name', 'duration_us', 'edge_policy'},
                     'Unsupported transition fields')
-            require(value.get('name') in TRANSITIONS, 'Transition has no current native resource capture')
+            require(value.get('name') in TRANSITIONS or resources.known('transition/' + str(value.get('name'))),
+                    'Transition has no current native resource capture')
             require(si + 1 < len(track['segments']), 'A transition needs a following segment')
             following = track['segments'][si + 1]
             require(spec.get('start_us', 0) + spec['duration_us'] == following.get('start_us', 0),

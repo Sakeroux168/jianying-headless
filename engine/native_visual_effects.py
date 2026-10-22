@@ -29,16 +29,29 @@ def uid():
     return str(uuid.uuid4()).upper()
 
 
+def param_schema(key):
+    """Plan parameter name -> (native adjust_params name, default)."""
+    if key == 'effect/light-shake':
+        return PARAMS
+    schema = {}
+    for param in resources.definition(key)['material'].get('adjust_params', []):
+        native = param['name']
+        short = native[len('effects_adjust_'):] if native.startswith('effects_adjust_') else native
+        schema[short] = (native, param.get('default_value', param.get('value')))
+    return schema
+
+
 def validate(spec, kind):
     if kind in BUCKETS:
-        require(isinstance(spec.get('name'), str) and spec['name'] in NAMES[kind],
-                'Visual effect has no current native capture')
+        require(isinstance(spec.get('name'), str) and (spec['name'] in NAMES[kind]
+                or resources.known(kind + '/' + spec['name'])), 'Visual effect has no current native capture')
         if kind == 'filter':
             numeric(spec.get('strength', 1), 'Filter strength')
         else:
+            schema = param_schema(kind + '/' + spec['name'])
             params = spec.get('params', {})
-            require(isinstance(params, dict) and not set(params) - set(PARAMS), 'Unsupported effect parameters')
-            for name, (_, default) in PARAMS.items():
+            require(isinstance(params, dict) and not set(params) - set(schema), 'Unsupported effect parameters')
+            for name, (_, default) in schema.items():
                 numeric(params.get(name, default), 'Effect ' + name)
     if 'text_effect' in spec:
         require(kind == 'text', 'Text effects require a text segment')
@@ -64,7 +77,8 @@ def overlay_segment(kind, spec, target, track_index):
     if kind == 'filter':
         node['value'] = spec.get('strength', 1)
     else:
-        values = {native: spec.get('params', {}).get(name, default) for name, (native, default) in PARAMS.items()}
+        values = {native: spec.get('params', {}).get(name, default)
+                  for name, (native, default) in param_schema(key).items()}
         for param in node['adjust_params']:
             param['value'] = values[param['name']]
     segment = deepcopy(entry['segment_template'])
@@ -108,11 +122,12 @@ def verify(segment, index, spec, kind, target, resolve_path, allow_native_cache=
         numeric(node.get('value', 1), 'Visual effect value')
         require(abs(node.get('value', 1) - expected) < 1e-5, 'Visual effect strength changed')
         if kind == 'effect':
+            schema = param_schema(kind + '/' + spec['name'])
             params = node.get('adjust_params', [])
             values = {p['name']: p.get('value', p.get('default_value')) for p in params}
-            require(len(values) == len(params) == len(PARAMS) and set(values) == {p[0] for p in PARAMS.values()},
+            require(len(values) == len(params) == len(schema) and set(values) == {p[0] for p in schema.values()},
                     'Visual effect parameters changed')
-            for name, (native, default) in PARAMS.items():
+            for name, (native, default) in schema.items():
                 numeric(values[native], 'Visual effect parameter')
                 require(abs(values[native] - spec.get('params', {}).get(name, default)) < 1e-5,
                         'Visual effect parameter changed: ' + name)

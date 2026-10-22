@@ -18,6 +18,19 @@ HERE = Path(__file__).resolve().parent
 CATALOG_SHA = '97af2df27463a9183fb1aa8f2ef534b37a644cb196f340fe88fdc50b456abde9'
 WINDOWS_OVERLAY_SHA = '0f4d10836287557ffdecb7485d0e3ae52cf8b9021a5fa651a1b1d3179c139336'
 SHAPES = ('circle', 'rectangle', 'line', 'mirror', 'star', 'heart')
+LIBRARY_SCHEMA = 'jy14-local-effects/v1'
+CONFIG = Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'jianying-headless' / 'config.json'
+
+
+def library_home():
+    """Local, never-distributed store of effect packages imported by the user."""
+    if os.environ.get('JIANYING_EFFECTS_HOME'):
+        return Path(os.environ['JIANYING_EFFECTS_HOME'])
+    if CONFIG.is_file():
+        configured = json.loads(CONFIG.read_text(encoding='utf-8')).get('effects_home')
+        if configured:
+            return Path(configured)
+    return CONFIG.parent / 'effects'
 
 
 def require(value, message):
@@ -72,6 +85,16 @@ def catalog():
             entry.pop('native_generated_cache_files', None)
             entry.update(source=patch['source'], tree_sha256=patch['tree_sha256'], files=patch['files'],
                          windows_capture=patch['capture'])
+    library = library_home() / 'catalog.json'
+    if library.is_file():
+        # User-imported effects (tools/import_effects.py). Reviewed entries above win;
+        # every package is still checked byte for byte against its recorded files.
+        local = json.loads(library.read_bytes())
+        require(local.get('schema') == LIBRARY_SCHEMA, 'Unsupported local effect library')
+        for key, entry in local['resources'].items():
+            require(key not in value['resources'], 'Local effect library cannot replace ' + key)
+            require(manifest_hash(entry['files']) == entry['tree_sha256'], 'Local effect tree identity mismatch: ' + key)
+            value['resources'][key] = entry
     # Only relocate the captured user's home prefix. Relative cache locations,
     # resource IDs, permissions and every resource byte hash remain unchanged.
     def expand_home(item):
@@ -89,6 +112,10 @@ def catalog():
             return str(Path.home() / relative)
         return item
     return expand_home(value)
+
+
+def known(key):
+    return key in catalog()['resources']
 
 
 def definition(key):
@@ -181,7 +208,9 @@ def verify_binding(key, value, target, resolve_native_path, allow_native_cache=F
     # Observed native 11.4.2 save resolves known resource IDs back to its cache.
     # Accept only that exact captured directory AND its exact contents, never
     # an arbitrary same-named path. This remains an explicit cache dependency.
-    require(allow_native_cache and actual == Path(entry['source']), 'Native resource path changed')
+    # Imported effects live in the local library but native save points at Jianying's own cache.
+    allowed = [Path(entry['source'])] + ([Path(entry['native_cache'])] if entry.get('native_cache') else [])
+    require(allow_native_cache and actual in allowed, 'Native resource path changed')
     generated = verify_cached_manifest(entry, tree_manifest(actual), 'Native cache resource bytes changed')
     result = {'key': key, 'location': 'native-cache', 'bytes_verified': True}
     if generated:
