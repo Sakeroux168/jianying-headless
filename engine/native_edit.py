@@ -482,8 +482,10 @@ def build(plan_path, out):
         path = folder / name
         if path.is_file():
             write_owned(path, rebase(j.read_json(path), source, target))
+    # Windows drafts carry no key_value.json; only maintain one that exists.
     kv_path = folder / 'key_value.json'
-    kv = j.read_json(kv_path)
+    has_kv = kv_path.is_file()
+    kv = j.read_json(kv_path) if has_kv else {}
     for operation in applied:
         if operation['op'] == 'duplicate_segment' and operation['id'] in kv:
             entry = deepcopy(kv[operation['id']])
@@ -492,15 +494,15 @@ def build(plan_path, out):
             kv[operation['created_segment_id']] = entry
         elif operation['op'] == 'remove_segment':
             kv.pop(operation['id'], None)
-    write_owned(kv_path, kv)
+    if has_kv:
+        write_owned(kv_path, kv)
     if assets:
         store_path = folder / 'draft_virtual_store.json'
         store = j.read_json(store_path)
         children = next(g['value'] for g in store['draft_virtual_store'] if g['type'] == 1)
         children.extend({'child_id': a['local_id'], 'parent_id': ''} for a in assets)
         write_owned(store_path, store)
-        kv_path = folder / 'key_value.json'
-        kv = j.read_json(kv_path)
+        kv = j.read_json(kv_path) if has_kv else {}
         for segment_timeline, track, segment in compound.all_segments(timeline):
             material = material_index(segment_timeline)[segment['material_id']][1]
             asset = next((a for a in assets if a['local_id'] == material.get('local_material_id')), None)
@@ -509,7 +511,8 @@ def build(plan_path, out):
                 entry.update(segmentId=segment['id'], materialId=asset['sha256'][:32],
                              materialName=Path(asset['source']).name, rank='1')
                 kv[segment['id']] = entry
-        write_owned(kv_path, kv)
+        if has_kv:
+            write_owned(kv_path, kv)
     resources = {str(path.relative_to(folder)): j.nd.digest(path) for path in (folder / 'Resources').rglob('*') if path.is_file()}
     j.write(out / 'plan.json', plan)
     j.write(out / 'source-timeline.json', original)
