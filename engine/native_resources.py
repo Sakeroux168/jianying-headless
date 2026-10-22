@@ -100,7 +100,9 @@ def definition(key):
 def relative_path(entry):
     fingerprint = entry['tree_sha256']
     require(len(fingerprint) == 64 and set(fingerprint) <= set('0123456789abcdef'), 'Invalid resource identity')
-    return 'Resources/headless-native/' + fingerprint
+    # Effect packages nest deeply; keep Windows paths under MAX_PATH. The full
+    # tree hash is still checked against every copied byte.
+    return 'Resources/headless-native/' + (fingerprint[:16] if rt.WINDOWS else fingerprint)
 
 
 def wanted_keys(plan):

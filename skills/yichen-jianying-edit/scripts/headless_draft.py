@@ -34,10 +34,10 @@ BACKEND = PROJECT_ROOT / 'engine'
 PINS = {
     'native_fonts.py': '20f6186cfa8e20cfbb3160e4c62216d1ad22a16feb8e241add40569668aef96d',
     'runtime_profiles.py': '227dac21aad9a28f50164f20ba6aed10cf9eaab5b2f56a12dc66a13bd92ecae3',
-    'jy14_headless.py': '24c47219b5b9a197b72ec7c567a5b6da9e5d6bc17f6ed37941b568db4cf193bd',
+    'jy14_headless.py': '4f2337e55e10033e5a24e0b6e217ba5c6d5af3eea6bae47f3696ec30099a0595',
     'native_motion.py': '5d743caaa38c921779166e5663d36f72a0c3fdb130a690ac3942a7adcf62d6c2',
     'native_effects.py': 'c46b2fc9221dd613f220564b752e532f8f3753dd5595aaffc24f41d5236e4e97',
-    'native_resources.py': '6873019fbeeb8ec436326940f7c3f3cdb23d3b94a76c8761c675ef746bb10b2c',
+    'native_resources.py': '4d8d7f0f8c7b1565b09400b2ea4e9e8acac17a2ac79b3fe5513f5cd5705beec7',
     'native_visual_effects.py': '15df7e56cc7d575a552c180e72ec712f136c618d271b2f3ad2d32dd5929e844c',
     'native-resource-catalog-windows.json': '0f4d10836287557ffdecb7485d0e3ae52cf8b9021a5fa651a1b1d3179c139336',
     'native-resource-catalog.json': '97af2df27463a9183fb1aa8f2ef534b37a644cb196f340fe88fdc50b456abde9',

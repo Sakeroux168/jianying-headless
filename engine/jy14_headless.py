@@ -469,6 +469,11 @@ def build(plan_path, out):
               'plan_sha256': nd.digest(out / 'plan.json'),
               'files': files_manifest(folder), 'media_copy_policy': 'draft-owned-resources',
               'ui_preparation_used': False, 'live_written': False, 'native_ui_acceptance': 'pending'}
+    if nd.WINDOWS:
+        # Jianying and the publish step both need every draft file under MAX_PATH (260).
+        longest = max((len(str(target / p)) for p in record['files']), default=0)
+        require(longest < 240, 'Draft paths would reach %d characters on Windows; choose a shorter draft name '
+                'or draft folder' % longest)
     write(out / 'build.json', record)
     verify_build(out)
     return {'status': 'built', 'build': str(out), 'name': target.name, 'duration_us': duration,
@@ -756,7 +761,9 @@ def publish(out, audit, resume=False, verify_build_fn=None, verify_live_fn=None)
                                       'index_sha256': nd.digest(temporary), 'resumed': resume,
                                       'prepared_via': prepared_via})
         if not resume:
-            stage = nd.DRAFT_ROOT / ('.jy14-headless-' + uuid.uuid4().hex)
+            # Short on Windows: the staged copy must fit MAX_PATH like the final draft.
+            stage = nd.DRAFT_ROOT / (('.jy14-' + uuid.uuid4().hex[:8]) if nd.WINDOWS
+                                     else ('.jy14-headless-' + uuid.uuid4().hex))
             shutil.copytree(out / 'draft', stage, copy_function=shutil.copy2)
             require(files_manifest(stage) == record['files'], 'Staged file copy differs')
             h._ensure_editor_closed(True)
