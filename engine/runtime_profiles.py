@@ -31,7 +31,9 @@ SCHEMA_RUNTIMES = {'187.0.0': frozenset([PROFILE_PREFIX + v for v in ('11.5.0', 
                    '189.0.0': frozenset((PROFILE_PREFIX + '11.6.0', WINDOWS_PROFILE_PREFIX + '11.6.0.14552'))}
 # Exact native UI save upgrades: runtime -> ({source schemas}, saved schema, stamped app version).
 SAVE_UPGRADES = {PROFILE_PREFIX + '11.5.0': (frozenset(('185.0.0',)), '187.0.0', '11.5.0'),
-                 PROFILE_PREFIX + '11.6.0': (frozenset(('185.0.0', '187.0.0')), '189.0.0', '11.6.0')}
+                 PROFILE_PREFIX + '11.6.0': (frozenset(('185.0.0', '187.0.0')), '189.0.0', '11.6.0'),
+                 # Observed on Windows 11.6.0.14552: a 185 headless draft saves as 189, stamped 11.6.0.
+                 WINDOWS_PROFILE_PREFIX + '11.6.0.14552': (frozenset(('185.0.0', '187.0.0')), '189.0.0', '11.6.0')}
 
 
 def validate_windows_identity(version, fingerprint):
