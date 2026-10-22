@@ -41,15 +41,57 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py verify --build D:\w
 | 路径写法 | 原生 | 正斜杠 `E:/...` |
 | 默认字幕字体 | 应用包内 `zh-hans.ttf` | 安装目录 `Resources/Font/SystemFont/zh-hans.ttf` |
 | 扩展属性 / clonefile | 保留 | 不适用 |
+| 特效资源目录名 | 完整 64 位树哈希 | 前 16 位（受 260 字符路径限制；完整哈希仍逐字节校验） |
+| 键值登记 `key_value.json` | 存在 | 草稿中没有，编辑时只维护已存在的文件 |
 
 ## 支持范围
 
-视频分段、多轨、变速、音量、画中画、字幕、本地字体、线性关键帧。
-蒙版、转场、滤镜、特效、花字依赖 macOS 采集的资源，Windows 上会明确报错。
-编辑已有草稿（`edit`）和原生导出暂未移植；成片导出用 `export --backend windows-ffmpeg`。
+视频分段、多轨、变速、音量、画中画、字幕、本地字体、线性关键帧；
+6 种蒙版、叠化转场、轻微抖动特效；编辑已有草稿的独立副本（`edit`）；
+UI 导出验收（`ui-export`）。复合片段（嵌套时间线）仍只在 macOS 上开放。
+
+特效资源取自本机剪映缓存：某个效果须先在剪映里用过一次（触发下载），否则构建会提示。
+蒙版与叠化的资源包与 macOS 采集逐字节相同；轻微抖动在 Windows 上是 GLSL 版本，
+由 `engine/native-resource-catalog-windows.json` 只替换来源与字节身份，素材模板不变。
+
+整套草稿文件路径须少于 240 字符，草稿名或草稿目录过长时构建会提前报错。
+
+### 编辑已有草稿
+
+~~~bat
+python skills\yichen-jianying-edit\scripts\headless_draft.py edit inspect --draft "E:\...\JianyingPro Drafts\某草稿" --out D:\work\inspect.json
+python skills\yichen-jianying-edit\scripts\headless_draft.py edit build --plan D:\work\edit-plan.json --out D:\work\edit-build
+python skills\yichen-jianying-edit\scripts\headless_draft.py edit publish --build D:\work\edit-build --audit D:\work\edit-audit
+python skills\yichen-jianying-edit\scripts\headless_draft.py edit verify --build D:\work\edit-build
+~~~
+
+计划格式与 macOS 相同，见 `skills/yichen-jianying-edit/references/edit-existing-macos.md`。
+
+### 导出成片
+
+无界面原生导出不移植：它依赖按版本逆向的内部函数地址，并会绕过编辑器导出时的会员/付费素材检查。
+成片用剪映自己的导出窗口完成，脚本负责前后校验：
+
+~~~bat
+python skills\yichen-jianying-edit\scripts\headless_draft.py ui-export plan --build D:\work\build1 --out D:\x\work\ui-export-1
+rem 按输出的 dialog_settings_required 在剪映中导出，不要先修改草稿
+python skills\yichen-jianying-edit\scripts\headless_draft.py ui-export verify --job D:\x\work\ui-export-1
+~~~
+
+任务目录路径中须有一级名为 `work` 的目录。导出后、校验前草稿不能被修改（剪映会自动保存）。
+不需要剪映草稿时，也可用 `export --backend windows-ffmpeg` 走 FFmpeg 渲染。
 
 ## 验收记录
 
 2026-10-21，剪映 11.6.0.14552：生成 2 段视频（含 1.5 倍速）+ 配音 + 2 句字幕的草稿，
 首页可见，打开、播放、修改、保存、完全退出后冷重开均正常。保存后时间线由 185.0.0
 升级为 189.0.0（`last_modified_platform.app_version` = 11.6.0），素材、时长、变速与字体绑定不变。
+
+2026-10-21，同版本补充验收：
+- 6 种蒙版 + 叠化转场的草稿：显示正确；剪映保存（189）后完整回读通过。保存会把资源路径改指本机缓存
+  （`native_cache_dependency: true`，与 macOS 行为一致）。
+- 11.5.3 保存的已有草稿的编辑副本（缩放、位移、音量）：显示正确，保存后完整回读通过，原草稿不变。
+- UI 导出：成片 5290 帧、1080×1920、H.264/AAC、完整解码，与导出计划一致；该次校验因导出后草稿
+  又被修改，按设计拒绝出具结论。
+- 口播自动剪辑：FunASR 本地转写 → 按能量修正切点 → `edit_plan.py compile` → 原生草稿，
+  185 秒剪至 176 秒，打开播放正常。
