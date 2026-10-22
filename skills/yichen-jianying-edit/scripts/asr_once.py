@@ -22,14 +22,14 @@ def digest(path):
 
 
 def read_result(path):
-    value = json.loads(Path(path).read_text())
+    value = json.loads(Path(path).read_text(encoding='utf-8'))
     if not value.get('result', {}).get('text'):
         raise ValueError('ASR result does not contain completed text.')
     return value
 
 
 def write_json(path, value, exclusive=False):
-    with Path(path).open('x' if exclusive else 'w') as stream:
+    with Path(path).open('x' if exclusive else 'w', encoding='utf-8') as stream:
         json.dump(value, stream, ensure_ascii=False, indent=2)
     os.chmod(path, 0o600)
 
@@ -39,7 +39,7 @@ def bound_result(source, ledger):
     record = Path(ledger) / key / 'state.json'
     if not record.exists():
         return key, None
-    state = json.loads(record.read_text())
+    state = json.loads(record.read_text(encoding='utf-8'))
     if state.get('source_sha256') != key:
         raise ValueError('Ledger/source hash mismatch.')
     if state.get('status') != 'completed':
@@ -99,7 +99,7 @@ def run(source, ledger):
                                  text=True, timeout=7200)
         # Keep diagnostic output local and redact the resolved credential and common auth fields.
         log = process.stdout.replace(token, '[credential redacted]')
-        (folder / 'executor.log').write_text(log)
+        (folder / 'executor.log').write_text(log, encoding='utf-8')
         os.chmod(folder / 'executor.log', 0o600)
         token = ''
         result = read_result(cache)

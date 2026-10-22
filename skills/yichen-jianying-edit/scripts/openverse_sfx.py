@@ -352,7 +352,7 @@ def resolve(client, query, max_us, ranked, work):
 
 
 def load_plan(path, compiled):
-    plan = json.loads(Path(path).read_text())
+    plan = json.loads(Path(path).read_text(encoding='utf-8'))
     if plan.get('schema') != HEADLESS_SCHEMA or not isinstance(plan.get('tracks'), list) or not plan['tracks']:
         raise ValueError('Expected the jy14-headless-plan/v1 written by headless_draft.py from-compiled.')
     main = plan['tracks'][0]
@@ -433,7 +433,7 @@ def write_json(path, value):
 
 
 def add(compiled_path, plan_path, out, work, commercial=False, client=None):
-    compiled = json.loads(Path(compiled_path).read_text())
+    compiled = json.loads(Path(compiled_path).read_text(encoding='utf-8'))
     edit_plan.validate_compiled(compiled)
     cues = compiled.get('openverse_sfx') or []
     if not cues:

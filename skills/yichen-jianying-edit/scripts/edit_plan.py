@@ -240,12 +240,12 @@ def timecode(us):
 def write_compiled(plan, out):
     out = Path(out).resolve()
     out.mkdir(parents=True, mode=0o700, exist_ok=False)
-    (out / 'compiled.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2))
+    (out / 'compiled.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
     (out / 'subtitles.srt').write_text('\n\n'.join(
         '%d\n%s --> %s\n%s' % (i + 1, timecode(s['start_us']), timecode(s['end_us']), s['text'])
-        for i, s in enumerate(plan['subtitles'])) + '\n')
+        for i, s in enumerate(plan['subtitles'])) + '\n', encoding='utf-8')
     (out / 'transcript.md').write_text('# 剪后转写稿\n\n' + '\n\n'.join(
-        '[%s] %s' % (timecode(s['start_us']), s['text']) for s in plan['subtitles']) + '\n')
+        '[%s] %s' % (timecode(s['start_us']), s['text']) for s in plan['subtitles']) + '\n', encoding='utf-8')
 
 
 def tempo_filters(speed):
@@ -308,7 +308,7 @@ def main():
     p.add_argument('--out', required=True, type=Path)
     p.add_argument('--work', required=True, type=Path)
     args = parser.parse_args()
-    plan = json.loads(args.plan.read_text())
+    plan = json.loads(args.plan.read_text(encoding='utf-8'))
     if args.command == 'compile':
         result = compile_plan(plan)
         validate_compiled(result)
