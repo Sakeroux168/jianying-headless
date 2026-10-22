@@ -58,10 +58,31 @@
      付费效果不得加入（不解锁、不伪造授权）。
    - 每个效果都要发布测试草稿，由用户在剪映里看效果、保存、冷重开，再 `verify` 回读。
 2. **复合片段（嵌套时间线）**：`native_compound.SUPPORTED_PROFILES` 未含 Windows；上游在 mac 上也仅实验性。
-3. **无界面原生导出：不要做。** 它依赖按版本逆向的内部函数偏移，并会绕过编辑器导出时的会员/付费素材检查。
-   成片只走 `ui-export` 或 `export --backend windows-ffmpeg`。
+3. **无界面原生导出：要做。** 前提与要求：
+   - 只针对固定版本 11.6.0.14552（用户不升级剪映，需在剪映设置里关闭自动更新）。
+   - **必须有白名单闸门**：直接调用引擎导出不会经过剪映导出窗口的会员检查，所以导出前逐个检查草稿里
+     所有效果/素材资源，只要有一个不在下方「白名单」里就拒绝导出。白名单只收用户确认免费的效果。
+   - 已查到 `videoeditor.dll` 公开导出了大部分所需接口：`lyra::Server::instance/openSession/invokeSync`、
+     `lvve::GetDraftFromJson/GetJsonFromDraft`、`Deserializer::deserialize_persistent_draft`、`ProjectClient`、
+     `Session::draftTransaction`、`lvve::Logger`，以及
+     `ExportClient::exportStart(shared_ptr<lyra::ExportStartReqStruct>, const function<void(shared_ptr<RespStruct>)>&, bool, long)`。
+   - 剩下要逆向的：`ExportStartReqStruct` 的大小、虚表和内部 ExportConfig 字段布局（输出路径、宽高、帧率、码率），
+     它的构造函数没有导出。参考 macOS 实现 `engine/native_export.cpp`（偏移和 libc++ 布局不能照搬；
+     Windows 是 MSVC：`std::string` 32 字节、`shared_ptr`/`function` 布局也不同）。
+   - 完成判定沿用 mac 的做法：捕获引擎日志中的 compile done 事件，成片再用 `native_export.py`
+     的探测与完整解码校验；在 `runtime_profiles.EXPORT_PROFILES` 里登记 Windows 配置。
+   - 在此之前，成片走 `ui-export` 或 `export --backend windows-ffmpeg`。
 4. **付费 ASR 未接**（豆包 `yichen-volc-asr` 需要 `VOLC_ASR_*` 环境变量；Step 2.5 公开仓库无执行器）。
 5. 口播 v1 的部分接缝有轻微跳帧感：停顿收到 0.03–0.22s；可放宽收紧幅度或在接缝加叠化。
+
+## 白名单（无界面导出只放行这里的效果）
+
+草稿数据里没有付费标记，以下由用户在剪映里确认（看会员角标 / 用剪映正常导出不弹会员提示）。
+
+白名单：（待用户确认后填写）
+
+待确认：叠化  圆形蒙版  矩形蒙版  线性蒙版  镜面蒙版  星形蒙版  爱心蒙版  轻微抖动
+　　　  摇镜  左移弹动  模糊放大  推远 II  无缝转场  聚光灯  渐渐放大  多屏球形  火光包围  流光暗角
 
 ## 必须遵守
 
