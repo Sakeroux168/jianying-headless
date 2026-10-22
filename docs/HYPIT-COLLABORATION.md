@@ -89,7 +89,7 @@ python3 skills/yichen-jianying-edit/scripts/headless_draft.py verify-build \
 ```
 
 输出目录必须不存在；本机首页登记、修改已有副本及导出方法见
-[README](../README.md) 与 [计划格式](../skills/yichen-jianying-edit/references/headless-macos.md)。
+[README](../README.md) 与 [计划格式](../skills/yichen-jianying-edit/references/headless-plan.md)。
 无需安装或更新 Hypit 来读取一份已经准备好的交接计划；上述命令不会重新生成 Hypit 素材。
 
 ## 新建计划中的字体指定

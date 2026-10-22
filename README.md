@@ -96,7 +96,7 @@ python3 skills/yichen-jianying-edit/scripts/headless_draft.py doctor
 桥接构建只编译项目源码并链接本机已安装程序库，不下载剪映、不修改官方库或账号权益。
 编译结果必须匹配固定哈希，否则停止。
 
-按 [计划格式](skills/yichen-jianying-edit/references/headless-macos.md) 准备 JSON，
+按 [计划格式](skills/yichen-jianying-edit/references/headless-plan.md) 准备 JSON，
 或参考 [基础计划](examples/basic.plan.json) 和 [Hypit 交接格式示例](examples/hypit-handoff.plan.json)。
 示例中的素材路径须替换为有权使用的本地文件。
 

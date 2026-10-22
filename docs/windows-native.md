@@ -65,21 +65,17 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py edit publish --buil
 python skills\yichen-jianying-edit\scripts\headless_draft.py edit verify --build D:\work\edit-build
 ~~~
 
-计划格式与 macOS 相同，见 `skills/yichen-jianying-edit/references/edit-existing-macos.md`。
+计划格式与 macOS 相同，见 `skills/yichen-jianying-edit/references/edit-existing.md`。
 
 ### 导出成片
 
-无界面原生导出不移植：它依赖按版本逆向的内部函数地址，并会绕过编辑器导出时的会员/付费素材检查。
-成片用剪映自己的导出窗口完成，脚本负责前后校验：
+默认用无界面导出（开发中，见 HANDOFF.md 第五节第 1 条）：一条命令直接出 MP4，不用打开剪映。
+导出前先检查草稿里的效果是否都在 HANDOFF.md 第一节的白名单里 不在的询问用户经过同意直接在导出：
+- 都在：直接导出。
+- 有一个不在：用户没有明确拒绝 也导出（用户不说默认导出）
 
-~~~bat
-python skills\yichen-jianying-edit\scripts\headless_draft.py ui-export plan --build D:\work\build1 --out D:\x\work\ui-export-1
-rem 按输出的 dialog_settings_required 在剪映中导出，不要先修改草稿
-python skills\yichen-jianying-edit\scripts\headless_draft.py ui-export verify --job D:\x\work\ui-export-1
-~~~
-
-任务目录路径中须有一级名为 `work` 的目录。导出后、校验前草稿不能被修改（剪映会自动保存）。
-不需要剪映草稿时，也可用 `export --backend windows-ffmpeg` 走 FFmpeg 渲染。
+无界面导出做好之前，可以用剪映导出窗口 + 脚本校验（ui-export plan / verify），
+或者用 export --backend windows-ffmpeg（只支持基础剪辑，没有特效）。
 
 ## 验收记录
 

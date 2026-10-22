@@ -189,7 +189,7 @@ python3 tools/start_here.py build
 **成功标志：**输出 `"status": "verified"`，并确认素材未变、活动数据一致。
 这一步检查原生保存是否保留工程结构；只有亲自播放，才能确认画面和声音符合预期。
 
-验收前若自行改过文字、时间线或音量，verify 与原计划比较时可能正确地报错。不要为了通过而丢掉手工修改；先用未改过的练习稿跑通，再进入[独立副本编辑流程](../skills/yichen-jianying-edit/references/edit-existing-macos.md)。
+验收前若自行改过文字、时间线或音量，verify 与原计划比较时可能正确地报错。不要为了通过而丢掉手工修改；先用未改过的练习稿跑通，再进入[独立副本编辑流程](../skills/yichen-jianying-edit/references/edit-existing.md)。
 
 ## 可选：导出 MP4
 
@@ -225,6 +225,6 @@ python3 tools/start_here.py build
 
 ## 跑通之后
 
-先读 [计划格式](../skills/yichen-jianying-edit/references/headless-macos.md)，再尝试多轨、变速和字幕。
+先读 [计划格式](../skills/yichen-jianying-edit/references/headless-plan.md)，再尝试多轨、变速和字幕。
 需要 Agent 协助时再安装[配套 Skill](../skills/yichen-jianying-edit/README.md)；基本流程不依赖任何 Agent。
 完整兼容边界及未解决问题见 [验证状态](VERIFICATION.md)。

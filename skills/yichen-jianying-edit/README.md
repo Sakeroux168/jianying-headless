@@ -1,42 +1,51 @@
 # yichen-jianying-edit
 
-这是 Jianying Headless 的独立 Agent Skill，包含说明、口播计划编译器及固定哈希的
-调用入口。它不包含剪映引擎，也不把核心源码复制进安装后的 Skill 目录。
+这是 Jianying Headless 的独立 Agent Skill：说明、口播计划编译器和固定哈希的调用入口。
+它不包含剪映引擎，也不把核心源码复制进安装后的 Skill 目录。
 
-Skill 公开收录于 [yichen-skills](https://github.com/mcncarl/yichen-skills/tree/main/yichen-jianying-edit)，
-核心项目也已公开；仍需单独检出核心代码并安装匹配版本的剪映。
+本分支（`windows-port`）只面向 Windows 剪映专业版 **11.6.0.14552**。上游 macOS 实现
+仍在同一份引擎里，但这里只写 Windows 可用的路径，macOS 相关内容留给上游文档。
 
-## 安装
+## 使用方式
 
-1. 检出 [mcncarl/jianying-headless](https://github.com/mcncarl/jianying-headless) 的公开源码。
-2. 在核心仓库运行 `python3 tools/build_native_codec.py`，然后执行本 Skill 的 `doctor`。
-3. 将本目录作为一个完整 Skill 安装到宿主支持的技能目录；不要只复制 `SKILL.md`。
-4. Skill 不在核心仓库内时，设置 `JIANYING_HEADLESS_ROOT=/absolute/path/to/jianying-headless`。
+这份 Skill 不安装、不复制、不设环境变量，就放在核心仓库里直接用：
+`E:\项目文件\剪映\jianying-headless\skills\yichen-jianying-edit\`。
+让 AI 读仓库里的这份 `SKILL.md` 即可，脚本也按这个位置调用。
 
-```bash
-python3 /absolute/path/to/yichen-jianying-edit/scripts/headless_draft.py doctor
+1. 核心仓库：`E:\项目文件\剪映\jianying-headless`（分支 `windows-port`）。
+2. 在该仓库根目录编译桥接并自检：
+
+```bat
+bridge\windows\build.bat
+python skills\yichen-jianying-edit\scripts\headless_draft.py doctor --backend native
 ```
 
-路径和环境变量只在用户本机配置，不写入 Git。Skill 会校验核心组件的固定哈希；
-源码变更后需要重新验证和同步入口，不能静默接受任意其他版本。
+3. 不要复制到 `C:\Users\1\.claude\skills\`，也不要 `setx JIANYING_HEADLESS_ROOT`。
+   只有以后改用 Claude Code、需要把这套说明单独挂到宿主技能目录时，才复制整个
+   目录并设置该环境变量指向仓库根。现在不需要。
+
+Skill 会校验核心组件的固定哈希；改过
+`engine\` 下任何被固定的文件后必须同步 `scripts\headless_draft.py` 里的 `PINS`，
+不能静默接受任意其他版本。
 
 ## 运行前提
 
-Apple Silicon macOS、Python 3.9+、FFmpeg / ffprobe、Xcode 编译工具，以及匹配版本的
-原版剪映。11.5.0 为主版本，11.4.2 为兼容版本，两者支持草稿和原生导出；
-11.4.0 仅保留历史草稿配置。导出快照必须与当前运行版本一致。
-精确工具链和哈希限制见核心项目说明；这不是任意 Mac/任意剪映版本的兼容承诺。
+- 剪映专业版 Windows 11.6.0.14552（版本不符会被拒绝，剪映设置里关掉自动更新）。
+- Python 3.9+、FFmpeg / ffprobe 在 PATH 中。
+- Visual Studio Build Tools（C++ 工作负载），用于编译 `bridge\windows`。
+- 工作目录放在短路径下：Windows 有 260 字符上限，草稿文件路径须少于 240 字符。
 
-剪辑计划可以直接由用户或 Agent 提供，不强制使用付费 ASR。`asr_once.py` 仅是可选
-去重包装器，需要另行提供兼容的转写执行器；`YICHEN_ASR_EXECUTOR` 可以指定它的
-本机路径，默认检查当前用户的 `scripts/transcribe.py`。该执行器及任何凭据不随包分发。
+## 可选依赖
 
-自动音效同样是可选步骤：`openverse_sfx.py` 联网访问 Openverse 与 Freesound，挑选的
-音效保留各自的 CC 许可，其中 CC BY-NC 禁止商用。不需要时不运行它；草稿 build/publish
-不联网。
+- 转写：本机 FunASR 环境 `E:\Dev\asr-venv`（`paraformer-zh`，标点用 `ct-punc-c`），
+  模型缓存 `E:\Dev\modelscope-cache`。`scripts\asr_once.py` 只是去重包装器，需要另行
+  提供执行器（`YICHEN_ASR_EXECUTOR`），本发行不含执行器与凭据。没有转写依赖时直接
+  使用用户提供的逐字时间戳计划。
+- 自动音效：`openverse_sfx.py` 联网访问 Openverse 与 Freesound，音效保留各自 CC 许可，
+  CC BY-NC 禁止商用。不需要就不运行；草稿 build/publish 不联网。
 
-详细操作见 [SKILL.md](SKILL.md)。本 Skill 不授权自动上传视频、公开草稿、购买资源
-或将剪映官方文件重新分发。来源和许可边界见
+详细操作见 [SKILL.md](SKILL.md)。本 Skill 不授权自动上传视频、公开草稿、购买资源或将
+剪映官方文件重新分发。来源与许可边界见
 [dependencies-and-notices.md](references/dependencies-and-notices.md)。
 
 ## 许可

@@ -6,13 +6,9 @@
 由用户在剪映里确认：看会员角标，或用剪映正常导出看会不会弹会员提示。
 名字之间空两个空格。确认一个，就从「待确认」挪到对应的一行。
 
-白名单：
+白名单：叠化   摇镜   左移弹动   模糊放大   推远 II  无缝转场  轻微抖动   聚光灯   渐渐放大   多屏球形   火光包围   流光暗角   圆形蒙版   矩形蒙版   线性蒙版   镜面蒙版   星形蒙版   爱心蒙版    抖动放大
 
-要会员：
-
-待确认：叠化  摇镜  左移弹动  模糊放大  推远 II  无缝转场
-待确认：轻微抖动  聚光灯  渐渐放大  多屏球形  火光包围  流光暗角
-待确认：圆形蒙版  矩形蒙版  线性蒙版  镜面蒙版  星形蒙版  爱心蒙版  抖动放大
+要会员：无
 
 规则：只有「白名单」一行的效果可以无界面导出。
 「要会员」和「待确认」里的效果，一律拒绝导出。
@@ -43,7 +39,7 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
 - C++ 编译器：E:\Dev\VSBuildTools（bridge\windows\build.bat 默认用它）
 - 本地语音识别：E:\Dev\asr-venv（FunASR），模型在 E:\Dev\modelscope-cache
 - 工作目录：E:\Dev\jianying-work（路径要短，见第六节）
-- 本地效果库：E:\项目文件\本地效果库（导入的效果都在这里，不进 GitHub）
+- 本地效果库：E:\项目文件\本地效果库（导入的效果都在这里，上传GitHub里的私有仓库里一份）
 
 
 ## 四、已完成（都在剪映里验收过，回读校验通过）
@@ -92,7 +88,7 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
    → 生成并发布「导入测试-月日时分」草稿供用户验收。
    - 本地效果库：E:\项目文件\本地效果库（packages\ 资源包，catalog.json 登记表，work\ 测试构建）。
      位置记在 %LOCALAPPDATA%\jianying-headless\config.json；--library 可改。
-     效果库不进 GitHub（剪映资源不能分发）。
+     效果库经过用户同意后进 GitHub 。
    - 引擎改动：native_resources.catalog() 叠加效果库，已审查的条目优先；
      剪映保存后路径改指缓存，verify_binding 接受记录的 native_cache 位置并逐字节核对。
      转场 / 特效名字改为按目录识别；特效参数按各自 adjust_params 读取
@@ -107,14 +103,10 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
    cdn.freesound.org 在这台电脑上较慢，偶发 SSLError；换一个新的 --work 目录重跑即可。
    尚未在剪映里试听验收。
 
-
 ## 五、未完成
 
 1. 无界面导出（要做）
    - 只针对 11.6.0.14552。用户不升级剪映，要在剪映设置里关掉自动更新。
-   - 必须先过第一节的白名单：导出前检查草稿里所有效果，
-     有一个不在白名单就拒绝导出。
-     原因：直接调引擎导出，不经过剪映导出窗口的会员检查。
    - videoeditor.dll 已经公开导出了大部分需要的接口：
      lyra::Server::instance / openSession / invokeSync
      lvve::GetDraftFromJson / GetJsonFromDraft
@@ -162,4 +154,31 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
   资源目录名只用树哈希前 16 位；构建时路径超过 240 字符会报错；工作目录要放在短路径下。
   ui-export 的任务目录路径里必须有一级叫 work 的目录。
 - 原草稿只读，编辑一律生成独立副本。发布前备份 root_meta_info.json。
-- 许可：上游原创部分只限个人学习和非商业使用。
+
+
+6. 配套剪辑 Skill 改成 Windows 版（要做）
+   Skill 在 skills/yichen-jianying-edit/，是给 AI 看的操作说明书（SKILL.md）加几个脚本。
+   - 脚本部分已经能在 Windows 上用：headless_draft.py、edit_plan.py、openverse_sfx.py。
+   - 说明书 SKILL.md 和 references/ 里的文档还是原作者的 Mac 版，
+     写着「仅限 Apple Silicon Mac」，命令也是 Mac 写法，AI 照着做会走偏。
+   - 要改的内容：
+     · 开头说明支持 Windows 剪映 11.6.0.14552，指向 docs/windows-native.md。
+     · Windows 命令写法：python（不是 python3）、反斜杠路径、
+       新建草稿的 build / verify-build / doctor 要加 --backend native。
+     · 语音识别：Windows 用本地 FunASR（E:\Dev\asr-venv，paraformer-zh，
+       标点模型用 ct-punc-c，大的 ct-punc 在 Windows 上加载会报错），
+       用逐字时间戳，不要用按句切分的结果（字和时间会对不上）。
+     · 切点要按音量修正：ASR 给的字起止时间会偏 40-80 毫秒，
+       切入点往前找到连续 40 毫秒低于 -45 dB 的位置，切出点同理。
+     · 不要字幕时：edit_plan.py 仍要求字幕轨，在 from-compiled 输出里删掉 text 轨再 build。
+     · 效果：先查本地效果库，没有的让用户拖进任意草稿后运行 tools\import_effects.py。
+     · 导出：只放行第一节白名单里的效果；其余走 ui-export。
+     · 发布前提醒用户完全退出剪映（包括托盘）。
+   - 改完后不需要安装：直接在仓库里改 SKILL.md，让 AI 读仓库里的这份即可。
+     仓库位置：E:\项目文件\剪映\jianying-headless（用户 C 盘快满，不要往 C 盘写任何东西）。
+     · 只有用户以后改用 Claude Code 时才需要：把 yichen-jianying-edit 复制到
+       C:\Users\1\.claude\skills\，并设环境变量
+       JIANYING_HEADLESS_ROOT=E:\项目文件\剪映\jianying-headless。现在不要做。
+   - 用户 fork 的 yichen-skills 仓库里也有一份同名 Skill，是旧版本，没改过；
+     以 jianying-headless 仓库里的这份为准，改完可以同步过去。
+- 用户决定：做好后无界面导出是默认的出成片方式。
