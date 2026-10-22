@@ -240,6 +240,10 @@ def validate_plan(plan):
         require(duration == main_end, 'Overlay, audio and text must fit within the main video duration')
     font_assets = fonts.collect_plan(plan)
     effects.transition_audit(plan, assets)
+    if nd.WINDOWS:
+        native = resources.wanted_keys(plan)
+        require(not native, 'Native masks/transitions/filters/effects are not yet captured for Windows: '
+                + ', '.join(native))
     return assets, duration, font_assets
 
 
@@ -261,6 +265,14 @@ def text_material(material, seg):
     length = len(seg['text'].encode('utf-16-le')) // 2
     color, border = seg.get('color', '#FFFFFF'), seg.get('border_color', '#000000')
     size, width = seg.get('size', 6), seg.get('border_width', .05)
+    if nd.WINDOWS:
+        # The captured default font lives inside the macOS app bundle; use the
+        # same bundled system font from the Windows install.
+        system_font = nd.native_path(nd.APP / 'Resources/Font/SystemFont/zh-hans.ttf')
+        material['font_path'] = system_font
+        for style in content['styles']:
+            if isinstance(style.get('font'), dict):
+                style['font']['path'] = system_font
     for style in content['styles']:
         style['range'] = [0, length]
         style['size'] = size
@@ -322,7 +334,7 @@ def timeline_for(plan, assets, target, tid, bp, font_assets=None):
                 if bucket == 'speeds':
                     material['speed'] = spec.get('speed', 1)
                 if bucket in {'videos', 'audios'}:
-                    material.update(path=str(target / asset['relative']), duration=asset['duration_us'],
+                    material.update(path=nd.native_path(target / asset['relative']), duration=asset['duration_us'],
                                     local_material_id=asset['local_id'])
                     if bucket == 'videos':
                         media_type = asset.get('media_type', 'video')
@@ -355,7 +367,7 @@ def library_record(asset, target, now):
     media_type = asset.get('media_type', 'video' if asset['kind'] == 'video' else 'music')
     duration = 5 * MICROS if media_type == 'photo' else asset['duration_us']
     return {'ai_group_type': '', 'create_time': now // MICROS, 'duration': duration, 'enter_from': 0,
-            'extra_info': Path(asset['source']).name, 'file_Path': str(target / asset['relative']),
+            'extra_info': Path(asset['source']).name, 'file_Path': nd.native_path(target / asset['relative']),
             'height': asset['height'], 'width': asset['width'], 'id': asset['local_id'],
             'import_time': now // MICROS, 'import_time_ms': now, 'item_source': 1, 'material_color_tag': '',
             'md5': '', 'metetype': media_type,
@@ -402,7 +414,8 @@ def build(plan_path, out):
     fonts.copy_assets(font_assets.values(), folder)
     timeline, reg = timeline_for(plan, assets, target, tid, bp, font_assets)
     metadata = deepcopy(bp['metadata'])
-    metadata.update(draft_id=did, draft_name=target.name, draft_fold_path=str(target), draft_root_path=str(nd.DRAFT_ROOT),
+    metadata.update(draft_id=did, draft_name=target.name, draft_fold_path=nd.native_path(target),
+                    draft_root_path=nd.native_path(nd.DRAFT_ROOT),
                     tm_draft_create=now, tm_draft_modified=now, tm_duration=duration,
                     draft_materials=[{'type': 0, 'value': [library_record(a, target, now) for a in assets.values()]}] +
                                     [{'type': t, 'value': []} for t in (1, 2, 3, 6, 7, 8)])
@@ -414,11 +427,12 @@ def build(plan_path, out):
     timeline_dir = folder / 'Timelines' / tid
     timeline_dir.mkdir(parents=True, mode=0o700)
     h = nd.helper()
-    h._encrypt_metadata_from_memory(nd.packed(timeline), folder / 'draft_info.json')
-    require(h._decrypt_metadata_in_memory(folder / 'draft_info.json') == timeline, 'Timeline codec round-trip failed')
-    cipher = (folder / 'draft_info.json').read_bytes()
-    for dest in (folder / 'template-2.tmp', timeline_dir / 'draft_info.json', timeline_dir / 'template-2.tmp',
-                 folder / 'draft_info.json.bak', timeline_dir / 'draft_info.json.bak'):
+    timeline_file = nd.TIMELINE_FILE
+    h._encrypt_metadata_from_memory(nd.packed(timeline), folder / timeline_file)
+    require(h._decrypt_metadata_in_memory(folder / timeline_file) == timeline, 'Timeline codec round-trip failed')
+    cipher = (folder / timeline_file).read_bytes()
+    for dest in (folder / 'template-2.tmp', timeline_dir / timeline_file, timeline_dir / 'template-2.tmp',
+                 folder / (timeline_file + '.bak'), timeline_dir / (timeline_file + '.bak')):
         write(dest, cipher)
     write(folder / 'key_value.json', reg)
     for name in ('project.json', 'project.json.bak'):
@@ -432,8 +446,8 @@ def build(plan_path, out):
                              'import_time_us': 0, 'material_color_tag': '', 'sort_sub_type': 0, 'sort_type': 0,
                              'subdraft_filter_type': 0}]},
         {'type': 1, 'value': [{'child_id': a['local_id'], 'parent_id': ''} for a in assets.values()]}, {'type': 2, 'value': []}]})
-    write(folder / 'draft_settings', ('[General]\ncloud_last_modify_platform=mac\ndraft_create_time=%d\n'
-                                     'draft_last_edit_time=%d\n' % (now // MICROS, now // MICROS)).encode())
+    write(folder / 'draft_settings', ('[General]\ncloud_last_modify_platform=%s\ndraft_create_time=%d\n'
+                                     'draft_last_edit_time=%d\n' % (nd.PLATFORM, now // MICROS, now // MICROS)).encode())
     # Cover generation is local and creates only a JPEG, never an intermediate video.
     videos = [a for a in assets.values() if a['kind'] == 'video']
     if videos:
@@ -487,7 +501,8 @@ def verify_structure(timeline, metadata, plan, assets, target, allow_native_reso
     validate_timeline_schema(timeline, runtime_profile)
     require(all(timeline['canvas_config'][k] == plan['canvas'][k] for k in ('width', 'height')), 'Canvas changed')
     require(timeline.get('fps', 30) == plan['canvas']['fps'], 'Timeline frame rate changed')
-    require(metadata['draft_fold_path'] == str(target) and metadata['draft_name'] == target.name, 'Draft identity mismatch')
+    require(metadata['draft_fold_path'] == nd.native_path(target) and metadata['draft_name'] == target.name,
+            'Draft identity mismatch')
     require(len(timeline.get('tracks', [])) == len(plan['tracks']), 'Track count changed')
     index = {}
     for bucket, mats in timeline['materials'].items():
@@ -599,7 +614,7 @@ def verify_build(out):
     target = nd.DRAFT_ROOT / plan['name']
     require(record['target'] == str(target), 'Build target is not the planned direct-child draft')
     h = nd.helper()
-    timeline = h._decrypt_metadata_in_memory(out / 'draft/draft_info.json')
+    timeline = h._decrypt_metadata_in_memory(out / 'draft' / nd.TIMELINE_FILE)
     metadata = h._decrypt_metadata_in_memory(out / 'draft/draft_meta_info.json')
     font_assets = fonts.recorded_assets(record, plan)
     verify_structure(timeline, metadata, plan, record['assets'], target, font_assets=font_assets or ())
@@ -610,6 +625,9 @@ def verify_build(out):
 
 
 def exclusive_rename(src, dst):
+    if nd.WINDOWS:
+        os.rename(src, dst)  # MoveFileEx without REPLACE_EXISTING: fails if dst exists
+        return
     libc = ctypes.CDLL(None, use_errno=True)
     fn = libc.renamex_np
     fn.argtypes, fn.restype = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint], ctypes.c_int
@@ -622,6 +640,8 @@ CLONE_NOFOLLOW = 0x0001  # <sys/clonefile.h>: a symlink source is cloned as a li
 
 
 def clonefile(source, destination):
+    if nd.WINDOWS:
+        raise OSError(errno.ENOTSUP, 'clonefile is macOS-only', str(destination))
     libc = ctypes.CDLL(None, use_errno=True)
     fn = libc.clonefile
     fn.argtypes, fn.restype = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint], ctypes.c_int
@@ -634,12 +654,19 @@ def index_entry(metadata, target):
     entry = {k: deepcopy(v) for k, v in metadata.items() if k.startswith(('draft_', 'tm_', 'cloud_', 'pippit_'))
              and k not in {'draft_materials', 'draft_materials_copied_info', 'draft_segment_extra_info',
                           'draft_enterprise_info', 'draft_timeline_materials_size_'}}
-    entry.update(draft_cover=str(target / 'draft_cover.jpg'), draft_json_file=str(target / 'draft_info.json'),
+    if nd.WINDOWS:
+        # Windows index entries join the last component with a backslash.
+        cover, json_file = (nd.native_path(target) + '\\' + name for name in ('draft_cover.jpg', nd.TIMELINE_FILE))
+    else:
+        cover, json_file = str(target / 'draft_cover.jpg'), str(target / nd.TIMELINE_FILE)
+    entry.update(draft_cover=cover, draft_json_file=json_file,
                  draft_timeline_materials_size=metadata['draft_timeline_materials_size_'], streaming_edit_draft_ready=True)
     return entry
 
 
 def read_xattrs(path):
+    if nd.WINDOWS:
+        return {}
     names = subprocess.check_output(['/usr/bin/xattr', str(path)], text=True).splitlines()
     return {name: bytes.fromhex(subprocess.check_output(['/usr/bin/xattr', '-px', name, str(path)], text=True))
             for name in names}
@@ -650,6 +677,8 @@ def copy_xattrs(source_attrs, destination, audit):
     write(audit / 'index-xattrs-before.json', {k: v.hex() for k, v in source_attrs.items()})
     for key, value in source_attrs.items():
         subprocess.run(['/usr/bin/xattr', '-wx', key, value.hex(), str(destination)], check=True, capture_output=True)
+    if nd.WINDOWS:
+        return {}, []
     copied = read_xattrs(destination)
     write(audit / 'index-xattrs-staged.json', {k: v.hex() for k, v in copied.items()})
     # A bounded copy experiment on this Mac showed xattr -w returns success but the
@@ -686,14 +715,14 @@ def publish(out, audit, resume=False, verify_build_fn=None, verify_live_fn=None)
     phase = 'locked'
     temporary = stage = prepared_via = None
     try:
-        root = h._snapshot_file(nd.DRAFT_ROOT / 'root_meta_info.json', 'home index')
+        root = h._snapshot_file(nd.INDEX_ROOT / 'root_meta_info.json', 'home index')
         original = h._parse_strict_json(root.content, 'home index')
-        require(original['root_path'] == str(nd.DRAFT_ROOT), 'Home index root path mismatch')
-        entries = [e for e in original['all_draft_store'] if e.get('draft_fold_path') == str(target)
+        require(original['root_path'] == nd.native_path(nd.INDEX_ROOT), 'Home index root path mismatch')
+        entries = [e for e in original['all_draft_store'] if e.get('draft_fold_path') == nd.native_path(target)
                    or e.get('draft_id') == record['draft_id']]
         if entries:
             require(resume and len(entries) == 1 and entries[0].get('draft_id') == record['draft_id']
-                    and entries[0].get('draft_fold_path') == str(target), 'Draft registration conflicts')
+                    and entries[0].get('draft_fold_path') == nd.native_path(target), 'Draft registration conflicts')
             phase = 'index_already_registered'
             result = dict(verify_live_fn(out), status='already_registered', index_written=False, audit=str(audit))
             write(audit / 'result.json', result)
@@ -795,7 +824,7 @@ def verify_live(out):
     target = nd.DRAFT_ROOT / plan['name']
     require(str(target) == record['target'] and target.is_dir() and not target.is_symlink(), 'Invalid target directory')
     h = nd.helper()
-    timeline = h._decrypt_metadata_in_memory(target / 'draft_info.json')
+    timeline = h._decrypt_metadata_in_memory(target / nd.TIMELINE_FILE)
     metadata = h._decrypt_metadata_in_memory(target / 'draft_meta_info.json')
     require(timeline['id'] == record['timeline_id'] and metadata['draft_id'] == record['draft_id'], 'Draft identity changed')
     native_resource_bindings = verify_structure(timeline, metadata, plan, record['assets'], target,
@@ -804,8 +833,8 @@ def verify_live(out):
                                                font_assets=font_assets or ())
     project = read_json(target / 'Timelines/project.json')
     require(project['main_timeline_id'] == timeline['id'], 'Project/timeline reference changed')
-    mirrors = [target / 'draft_info.json', target / 'template-2.tmp',
-               target / 'Timelines' / timeline['id'] / 'draft_info.json',
+    mirrors = [target / nd.TIMELINE_FILE, target / 'template-2.tmp',
+               target / 'Timelines' / timeline['id'] / nd.TIMELINE_FILE,
                target / 'Timelines' / timeline['id'] / 'template-2.tmp']
     require(len({nd.digest(p) for p in mirrors}) == 1 and len({(p.stat().st_dev, p.stat().st_ino) for p in mirrors}) == 4,
             'Four active mirrors must be equal and physically independent')
@@ -813,9 +842,10 @@ def verify_live(out):
         require(nd.digest(target / asset['relative']) == asset['sha256'], 'Draft-owned media changed')
     resources.verify_files(record.get('native_resources', []), target, plan)
     font_files = fonts.verify_assets(font_assets, timeline, target, target) if font_assets is not None else 0
-    root = read_json(nd.DRAFT_ROOT / 'root_meta_info.json')
+    root = read_json(nd.INDEX_ROOT / 'root_meta_info.json')
     entries = [e for e in root['all_draft_store'] if e.get('draft_id') == record['draft_id']]
-    require(len(entries) == 1 and entries[0]['draft_fold_path'] == str(target), 'Home registration missing or ambiguous')
+    require(len(entries) == 1 and entries[0]['draft_fold_path'] == nd.native_path(target),
+            'Home registration missing or ambiguous')
     return {'status': 'verified', 'draft': str(target), 'name': target.name, 'duration_us': timeline.get('duration', 0),
             'native_timeline_schema': timeline['new_version'],
             'tracks': [{'type': t['type'], 'segments': len(t['segments'])} for t in timeline.get('tracks', [])],

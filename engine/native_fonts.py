@@ -141,7 +141,7 @@ def copy_assets(assets, folder):
 def bind(material, asset, target):
     obj = content(material)
     ordinary_font(material, obj, target)
-    new_path = str(target / asset['relative'])
+    new_path = rt.native_path(target / asset['relative'])
     for style in obj['styles']:
         style['font']['path'] = new_path
         style['font']['id'] = ''

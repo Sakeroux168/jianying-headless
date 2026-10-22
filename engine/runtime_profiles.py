@@ -17,13 +17,31 @@ RESOURCE_PROFILES = frozenset(PROFILE_PREFIX + v for v in ('11.6.0', '11.5.0', '
 EDIT_PROFILES = frozenset(PROFILE_PREFIX + v for v in ('11.6.0', '11.5.0', '11.4.2', '11.4.0'))
 RESOURCE_CAPTURE_PROFILE = PROFILE_PREFIX + '11.4.2'
 TIMELINE_SCHEMAS = frozenset((('185.0.0', 360000), ('187.0.0', 360000), ('189.0.0', 360000)))
+# Windows installs: exact install version -> videoeditor.dll SHA-256. The DLL
+# supplies lvve::EncryptUtils to bridge/windows/jy14_codec_win.exe.
+WINDOWS_PROFILE_PREFIX = 'jy14-headless-windows-'
+WINDOWS_PROFILES = {
+    '11.6.0.14552': '8cfcbb612ccd946df974428977b1902736c1de0ae561e20c26cbd4ea86099cb1',
+}
 # Saved formats newer than the builder's 185 are accepted only on runtimes observed reading them:
-# 11.5.0 writes 187; 11.6.0 reads 187 copies and writes 189.
-SCHEMA_RUNTIMES = {'187.0.0': frozenset(PROFILE_PREFIX + v for v in ('11.5.0', '11.6.0')),
-                   '189.0.0': frozenset((PROFILE_PREFIX + '11.6.0',))}
+# 11.5.0 writes 187; 11.6.0 reads 187 copies and writes 189. Windows 11.6.0 opens
+# drafts saved by Windows 11.5.3 (187).
+SCHEMA_RUNTIMES = {'187.0.0': frozenset([PROFILE_PREFIX + v for v in ('11.5.0', '11.6.0')]
+                                        + [WINDOWS_PROFILE_PREFIX + '11.6.0.14552']),
+                   '189.0.0': frozenset((PROFILE_PREFIX + '11.6.0', WINDOWS_PROFILE_PREFIX + '11.6.0.14552'))}
 # Exact native UI save upgrades: runtime -> ({source schemas}, saved schema, stamped app version).
 SAVE_UPGRADES = {PROFILE_PREFIX + '11.5.0': (frozenset(('185.0.0',)), '187.0.0', '11.5.0'),
                  PROFILE_PREFIX + '11.6.0': (frozenset(('185.0.0', '187.0.0')), '189.0.0', '11.6.0')}
+
+
+def validate_windows_identity(version, fingerprint):
+    if version not in WINDOWS_PROFILES:
+        raise ValueError('Unsupported Windows Jianying version ' + str(version) + '; stop native writes')
+    if fingerprint != WINDOWS_PROFILES[version]:
+        raise ValueError('videoeditor.dll differs from its exact headless runtime profile; version='
+                         + version + '; actual=' + str(fingerprint) + '; expected=' + WINDOWS_PROFILES[version]
+                         + '. This build needs review; do not replace the expected hash.')
+    return version
 
 
 def validate_timeline_schema(timeline, runtime_profile=None):
@@ -31,7 +49,8 @@ def validate_timeline_schema(timeline, runtime_profile=None):
     if type(schema[1]) is not int or schema not in TIMELINE_SCHEMAS:
         raise ValueError('Unexpected native timeline version')
     if runtime_profile is not None:
-        known = {PROFILE_PREFIX + version for version in PROFILES}
+        known = ({PROFILE_PREFIX + version for version in PROFILES}
+                 | {WINDOWS_PROFILE_PREFIX + version for version in WINDOWS_PROFILES})
         readers = SCHEMA_RUNTIMES.get(schema[0])
         if runtime_profile not in known or (readers is not None and runtime_profile not in readers):
             raise ValueError('Native timeline schema is incompatible with this runtime profile')
