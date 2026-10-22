@@ -1,0 +1,103 @@
+{
+ "resources": {
+  "effect/light-shake": {
+   "capture": "Selected in the Windows 11.6.0.14552 UI on 2026-10-21; the saved video_effects material (name, ids, category, adjust_params) matched the base template field for field.",
+   "files": {
+    "AmazingFeature/LuaRTTI.MarkGen.lua": {
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "size": 0
+    },
+    "AmazingFeature/algorithmConfig.json": {
+     "sha256": "052165d63e60d496d3ae3d6bccea21d21071069a81b5a2d16c01554aa0a46d24",
+     "size": 665
+    },
+    "AmazingFeature/alphaOutput_202101121913242fb870a854c711ebb5eaacde48001122/alphaOutput.frag": {
+     "sha256": "1daa75c007305b9dd9142067d6d97db6c694d69367b6c8d672c96778eb64ba26",
+     "size": 243
+    },
+    "AmazingFeature/alphaOutput_202101121913242fb870a854c711ebb5eaacde48001122/alphaOutput.material": {
+     "sha256": "8a9870a53dc0d502abb1a162c953e6ac86dfa8a5638adef2675cf9b4e51c4c95",
+     "size": 807
+    },
+    "AmazingFeature/alphaOutput_202101121913242fb870a854c711ebb5eaacde48001122/alphaOutput.mesh": {
+     "sha256": "f658a53739fcb1d6e73a5a482fa33d5f91b7057befff160082f1110710b3048a",
+     "size": 1078
+    },
+    "AmazingFeature/alphaOutput_202101121913242fb870a854c711ebb5eaacde48001122/alphaOutput.rt": {
+     "sha256": "e271b01620710d21b86ad3dd3b56c8812feaa41c49e8c3e274d2c34d03856c0f",
+     "size": 546
+    },
+    "AmazingFeature/alphaOutput_202101121913242fb870a854c711ebb5eaacde48001122/alphaOutput.vert": {
+     "sha256": "04e876ed7cd57c076a7c3d441922b28e6e1cee7da8c0907c0708e90fb4ab9ea1",
+     "size": 241
+    },
+    "AmazingFeature/alphaOutput_202101121913242fb870a854c711ebb5eaacde48001122/alphaOutput.xshader": {
+     "sha256": "c07ccd2259c40598587a557ca3eef91cf465129edb29d8e5f3bba964fe178bbd",
+     "size": 1716
+    },
+    "AmazingFeature/content.json": {
+     "sha256": "c684243780a88bc6b7bc5f8772abfdb32a347eac80dbebb36d57815949adce20",
+     "size": 796
+    },
+    "AmazingFeature/lua-meta.json": {
+     "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "size": 2
+    },
+    "AmazingFeature/lua/SeekModeScript.lua": {
+     "sha256": "4459a8275c2001931abaaa65bc494e8687aa0e9954080dbb5ae3b4c284b72f1d",
+     "size": 2779
+    },
+    "AmazingFeature/main.scene": {
+     "sha256": "0b558555e8873a8d26c3b7ff2bdc0d03c634a228836780eb07668d7f9a42ab66",
+     "size": 2073
+    },
+    "AmazingFeature/material/entity.material": {
+     "sha256": "e175214c8a92954f5b7837abb586720216985028f172b8663f3c554a3f4b56ec",
+     "size": 766
+    },
+    "AmazingFeature/mesh/quad.mesh": {
+     "sha256": "cc53f5c66c12c18875a976c41aa64104675159086030f9a2a6a5268ca0f37f48",
+     "size": 886
+    },
+    "AmazingFeature/rt/outputTex.rt": {
+     "sha256": "c97fb469a1ed628a5dff98d5a79352779140dbc08f14b249e537c4a00e53eee2",
+     "size": 537
+    },
+    "AmazingFeature/scene.config": {
+     "sha256": "ebbecf0c9eaa8627016c561339e73b9ee9228754245783228342fc9ed5e0cafa",
+     "size": 363
+    },
+    "AmazingFeature/sticker.config": {
+     "sha256": "661d3f6bf978a3d8ba193566c404a6fe61895dfb7952f232033fa5aa7a2fa9d5",
+     "size": 261
+    },
+    "AmazingFeature/xshader/entity.xshader": {
+     "sha256": "8b0f8accb7af7b3b2471e33eb3c62b93f04e13d1761d45133880df8e70e4a5f2",
+     "size": 1586
+    },
+    "AmazingFeature/xshader/fshader.frag": {
+     "sha256": "2aadab1012db9d405d1d91b98d2e9069829aff3ef99539991cea2c655ab93ea0",
+     "size": 523
+    },
+    "AmazingFeature/xshader/vshader.vert": {
+     "sha256": "eb8d3949714bbbc5b25e281654e902762e4d6f173bd7a09ac6c176821a2a6091",
+     "size": 352
+    },
+    "config.json": {
+     "sha256": "dd2b9a53c1978b150a84195b471a71fe51eed39e7d99b3506f71a344086185c4",
+     "size": 253
+    },
+    "extra.json": {
+     "sha256": "b949b259fa12c8cca0f00f95107a1090c452fe41b16c8b3ac5087b8db723ddf3",
+     "size": 401
+    }
+   },
+   "reason": "GLSL build of the package; the macOS package ships Metal/GLES shader data instead",
+   "source": "@home/Movies/JianyingPro/User Data/Cache/effect/7399493554147527951/b5235343ec32572db40123246a22fefa",
+   "tree_sha256": "54356995790a3b2e70541f88df7cca1d47c34d685b0c4b0dbae70c8a5c349661"
+  }
+ },
+ "runtime_profile": "jy14-headless-windows-11.6.0.14552",
+ "schema": "jy14-native-resource-catalog-windows/v1",
+ "scope": "Windows packages that differ from the macOS 11.4.2 capture. Only source, tree and files are replaced; material, usage and templates stay those of the base catalog."
+}

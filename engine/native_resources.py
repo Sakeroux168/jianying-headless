@@ -16,6 +16,7 @@ from runtime_profiles import validate_resource_profile
 
 HERE = Path(__file__).resolve().parent
 CATALOG_SHA = '97af2df27463a9183fb1aa8f2ef534b37a644cb196f340fe88fdc50b456abde9'
+WINDOWS_OVERLAY_SHA = 'f1a75f94566e11debf568666040e1673402a678a92239f5b739588889ce5c9a6'
 SHAPES = ('circle', 'rectangle', 'line', 'mirror', 'star', 'heart')
 
 
@@ -58,6 +59,19 @@ def catalog():
     require(rt.digest(path) == CATALOG_SHA, 'Native resource catalog changed; review capture provenance')
     value = json.loads(path.read_bytes())
     require(value['schema'] == 'jy14-native-resource-catalog/v1', 'Unsupported native resource catalog')
+    if rt.WINDOWS:
+        # Platform-built packages (shaders) differ on Windows; replace only their
+        # location and byte identity. Templates and usage stay the reviewed ones.
+        overlay_path = HERE / 'native-resource-catalog-windows.json'
+        require(rt.digest(overlay_path) == WINDOWS_OVERLAY_SHA, 'Windows resource overlay changed; review its capture')
+        overlay = json.loads(overlay_path.read_bytes())
+        require(overlay['schema'] == 'jy14-native-resource-catalog-windows/v1', 'Unsupported Windows resource overlay')
+        for key, patch in overlay['resources'].items():
+            entry = value['resources'][key]
+            require(manifest_hash(patch['files']) == patch['tree_sha256'], 'Windows overlay tree identity mismatch')
+            entry.pop('native_generated_cache_files', None)
+            entry.update(source=patch['source'], tree_sha256=patch['tree_sha256'], files=patch['files'],
+                         windows_capture=patch['capture'])
     # Only relocate the captured user's home prefix. Relative cache locations,
     # resource IDs, permissions and every resource byte hash remain unchanged.
     def expand_home(item):
