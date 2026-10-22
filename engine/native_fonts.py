@@ -187,7 +187,7 @@ def rebase_existing(timeline, source, target):
                 if source not in path.parents:
                     continue
                 relative = path.relative_to(source)
-                owner[key] = str(target / relative)
+                owner[key] = rt.native_path(target / relative)
                 changed |= owner is not material
             if changed:
                 material['content'] = json.dumps(obj, ensure_ascii=False, separators=(',', ':'))

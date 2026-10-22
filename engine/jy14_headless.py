@@ -240,10 +240,6 @@ def validate_plan(plan):
         require(duration == main_end, 'Overlay, audio and text must fit within the main video duration')
     font_assets = fonts.collect_plan(plan)
     effects.transition_audit(plan, assets)
-    if nd.WINDOWS:
-        native = resources.wanted_keys(plan)
-        require(not native, 'Native masks/transitions/filters/effects are not yet captured for Windows: '
-                + ', '.join(native))
     return assets, duration, font_assets
 
 

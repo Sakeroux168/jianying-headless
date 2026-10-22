@@ -68,6 +68,10 @@ def catalog():
         if isinstance(item, str) and item.startswith('@home/'):
             relative = Path(item[len('@home/'):])
             require(not relative.is_absolute() and '..' not in relative.parts, 'Invalid catalog home-relative path')
+            if rt.WINDOWS and relative.parts[:2] == ('Movies', 'JianyingPro'):
+                # Same effect packages (byte-identical) live under LOCALAPPDATA on Windows.
+                local = Path(os.environ.get('LOCALAPPDATA', str(Path.home() / 'AppData/Local')))
+                return str(local.joinpath('JianyingPro', *relative.parts[2:]))
             return str(Path.home() / relative)
         return item
     return expand_home(value)
@@ -106,6 +110,8 @@ def prepare(plan, folder, runtime):
     for key in keys:
         entry = definition(key)
         source = Path(entry['source'])
+        require(source.is_dir(), 'Native resource ' + key + ' is not in the local Jianying cache; '
+                'use it once in Jianying so it downloads, then retry')
         require(source.is_absolute() and source.resolve(strict=True) == source,
                 'Native resource source must be the captured canonical directory')
         generated = verify_cached_manifest(entry, tree_manifest(source), 'Native resource bytes differ from captured identity')
@@ -137,7 +143,7 @@ def prepare(plan, folder, runtime):
 def material(key, target):
     entry = definition(key)
     value = deepcopy(entry['material'])
-    value['path'] = str(Path(target) / relative_path(entry))
+    value['path'] = rt.native_path(Path(target) / relative_path(entry))
     return value
 
 

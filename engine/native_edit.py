@@ -21,6 +21,8 @@ import native_fonts as fonts
 from runtime_profiles import EDIT_PROFILES, validate_timeline_schema, saved_schema_upgrade
 
 SCHEMA = 'jy14-edit-plan/v1'
+# Windows apps observed saving source drafts that the Windows 11.6.0 runtime opens.
+WINDOWS_PRIOR_APPS = frozenset(('11.5.3', '11.6.0'))
 BUILD_SCHEMA = 'jy14-edit-build/v1'
 
 
@@ -71,8 +73,8 @@ def basic_validation(timeline):
 
 
 def mirrors(folder, timeline_id):
-    return [folder / 'draft_info.json', folder / 'template-2.tmp',
-            folder / 'Timelines' / timeline_id / 'draft_info.json',
+    return [folder / j.nd.TIMELINE_FILE, folder / 'template-2.tmp',
+            folder / 'Timelines' / timeline_id / j.nd.TIMELINE_FILE,
             folder / 'Timelines' / timeline_id / 'template-2.tmp']
 
 
@@ -84,13 +86,13 @@ def load_source(value):
     helper._ensure_editor_closed(True)
     source = source_directory(value)
     before = j.files_manifest(source)
-    timeline = helper._decrypt_metadata_in_memory(source / 'draft_info.json')
+    timeline = helper._decrypt_metadata_in_memory(source / j.nd.TIMELINE_FILE)
     metadata = helper._decrypt_metadata_in_memory(source / 'draft_meta_info.json')
     project = j.read_json(source / 'Timelines/project.json')
     compound.validate(timeline, basic_validation)
     for _, node in compound.graph(timeline):
         validate_timeline_schema(node, runtime['runtime_profile'])
-    j.require(metadata['draft_fold_path'] == str(source), 'Source metadata path mismatch')
+    j.require(metadata['draft_fold_path'] == j.nd.native_path(source), 'Source metadata path mismatch')
     j.require(project['main_timeline_id'] == timeline['id'], 'Source main timeline mismatch')
     j.require(len(project['timelines']) == 1 and project['timelines'][0]['id'] == timeline['id'],
               'Multi-timeline copies need a dedicated compatibility profile')
@@ -111,7 +113,7 @@ def inspect(value, out):
     source, files, timeline, metadata, project = load_source(value)
     index = material_index(timeline)
     result = {'schema': 'jy14-edit-inspection/v1', 'source': {'draft_path': str(source), 'draft_id': metadata['draft_id'],
-              'timeline_sha256': files['draft_info.json']['sha256']},
+              'timeline_sha256': files[j.nd.TIMELINE_FILE]['sha256']},
               'timeline_id': timeline['id'], 'duration_us': timeline.get('duration', 0), 'tracks': []}
     for track in timeline.get('tracks', []):
         row = {'id': track['id'], 'type': track['type'], 'name': track.get('name', ''), 'segments': []}
@@ -155,10 +157,12 @@ def rebase(value, source, target):
     if isinstance(value, list):
         return [rebase(item, source, target) for item in value]
     if isinstance(value, str):
-        if value == str(source):
-            return str(target)
-        if value.startswith(str(source) + '/'):
-            return str(target) + value[len(str(source)):]
+        old, new = j.nd.native_path(source), j.nd.native_path(target)
+        if value == old:
+            return new
+        # Windows index-style paths join the last component with a backslash.
+        if value.startswith(old + '/') or (j.nd.WINDOWS and value.startswith(old + '\\')):
+            return new + value[len(old):]
     return value
 
 
@@ -310,7 +314,7 @@ def apply_local_operations(timeline, metadata, operations, target, font_sources=
             j.require(material.get('type') == expected_type, 'Replacement media type must match the original')
             asset.update(relative='Resources/headless-edited-media/' + asset['sha256'] + Path(asset['source']).suffix.lower(),
                          local_id=j.identifier())
-            material.update(path=str(target / asset['relative']), local_material_id=asset['local_id'],
+            material.update(path=j.nd.native_path(target / asset['relative']), local_material_id=asset['local_id'],
                             duration=j.STILL_CAPACITY_US if asset['media_type'] in {'photo', 'gif'} else asset['duration_us'])
             if bucket == 'videos':
                 material.update(width=asset['width'], height=asset['height'], has_audio=asset['has_audio'],
@@ -402,7 +406,7 @@ def build(plan_path, out):
     j.keys(plan.get('source'), {'draft_path', 'draft_id', 'timeline_sha256'}, 'Source preconditions')
     source, source_files, original, original_meta, project = load_source(plan['source']['draft_path'])
     j.require(plan['source'].get('draft_id') == original_meta['draft_id'] and
-              plan['source'].get('timeline_sha256') == source_files['draft_info.json']['sha256'], 'Stale source preconditions')
+              plan['source'].get('timeline_sha256') == source_files[j.nd.TIMELINE_FILE]['sha256'], 'Stale source preconditions')
     j.validate_plan({'schema': j.SCHEMA, 'name': plan['name'], 'canvas': {'width': 16, 'height': 16, 'fps': 30}, 'tracks': []})
     target = j.nd.DRAFT_ROOT / plan['name']
     j.require(not target.exists(), 'Copy target already exists')
@@ -412,7 +416,7 @@ def build(plan_path, out):
     for owner, child in compound.graph(timeline):
         if owner is not None:
             for key, path in compound.paths(owner, target).items():
-                owner[key] = str(path)
+                owner[key] = j.nd.native_path(path)
     fonts.rebase_existing(timeline, source, target)
     assets, applied = apply_operations(timeline, metadata, plan['operations'], target)
     font_assets = fonts.collect_edit_assets(timeline, source, target,
@@ -450,7 +454,7 @@ def build(plan_path, out):
     shutil.copytree(source, folder, copy_function=shutil.copy2)
     j.require(j.files_manifest(folder) == source_files and j.files_manifest(source) == source_files, 'Source/copy changed during snapshot')
     now = time.time_ns() // 1000
-    metadata.update(draft_id=j.identifier(), draft_name=target.name, draft_fold_path=str(target),
+    metadata.update(draft_id=j.identifier(), draft_name=target.name, draft_fold_path=j.nd.native_path(target),
                     tm_draft_create=now, tm_draft_modified=now)
     project.update(id=j.identifier(), create_time=now, update_time=now)
     for asset in assets + font_assets:
@@ -465,8 +469,8 @@ def build(plan_path, out):
     cipher_path = out / 'edited-timeline.cipher'
     helper._encrypt_metadata_from_memory(j.nd.packed(timeline), cipher_path)
     cipher = cipher_path.read_bytes()
-    for path in mirrors(folder, timeline['id']) + [folder / 'draft_info.json.bak',
-                                                  folder / 'Timelines' / timeline['id'] / 'draft_info.json.bak']:
+    for path in mirrors(folder, timeline['id']) + [folder / (j.nd.TIMELINE_FILE + '.bak'),
+                                                  folder / 'Timelines' / timeline['id'] / (j.nd.TIMELINE_FILE + '.bak')]:
         write_owned(path, cipher)
     metadata['draft_timeline_materials_size_'] = sum(p.stat().st_size for p in folder.rglob('*') if p.is_file())
     meta_cipher = out / 'edited-metadata.cipher'
@@ -538,7 +542,7 @@ def verify_build(out):
     j.require(record['target'] == str(j.nd.DRAFT_ROOT / plan['name']), 'Edit copy target mismatch')
     expected = j.read_json(out / 'expected-timeline.json')
     helper = j.nd.helper()
-    j.require(helper._decrypt_metadata_in_memory(out / 'draft/draft_info.json') == expected, 'Edited timeline differs from expected full structure')
+    j.require(helper._decrypt_metadata_in_memory(out / 'draft' / j.nd.TIMELINE_FILE) == expected, 'Edited timeline differs from expected full structure')
     compound.validate(expected, basic_validation)
     compound.check_sidecars(expected, Path(record['target']), out / 'draft', preserved)
     font_assets = fonts.recorded_assets(record, plan)
@@ -882,9 +886,10 @@ def verify_live(out):
     target = j.nd.DRAFT_ROOT / plan['name']
     j.require(str(target) == record['target'] and target.is_dir() and not target.is_symlink(), 'Invalid edit copy path')
     helper = j.nd.helper()
-    actual = helper._decrypt_metadata_in_memory(target / 'draft_info.json')
+    actual = helper._decrypt_metadata_in_memory(target / j.nd.TIMELINE_FILE)
     metadata = helper._decrypt_metadata_in_memory(target / 'draft_meta_info.json')
-    j.require(metadata['draft_id'] == record['draft_id'] and metadata['draft_fold_path'] == str(target), 'Edit copy identity changed')
+    j.require(metadata['draft_id'] == record['draft_id'] and metadata['draft_fold_path'] == j.nd.native_path(target),
+              'Edit copy identity changed')
     expected = j.read_json(out / 'expected-timeline.json')
     compound.validate(actual, basic_validation)
     runtime = j.nd.doctor()['runtime_profile']
@@ -905,7 +910,8 @@ def verify_live(out):
             after['new_version'] = before['new_version']
             old_platform = before.get('last_modified_platform', {})
             if 'app_version' in old_platform:
-                j.require(old_platform['app_version'] in j.nd.PROFILES,
+                j.require(old_platform['app_version'] in j.nd.PROFILES or
+                          (j.nd.WINDOWS and old_platform['app_version'] in WINDOWS_PRIOR_APPS),
                           'Unknown previous native save application')
                 change['last_modified_app_before'] = old_platform['app_version']
                 change['last_modified_app_after'] = after['last_modified_platform']['app_version']
@@ -913,8 +919,8 @@ def verify_live(out):
             new_platform = after['last_modified_platform']
             if 'os_version' in old_platform and old_platform['os_version'] != new_platform.get('os_version'):
                 old_os, new_os = old_platform['os_version'], new_platform.get('os_version')
-                current_os = platform.mac_ver()[0]
-                j.require(old_platform.get('os') == new_platform.get('os') == 'mac' and
+                current_os = platform.version() if j.nd.WINDOWS else platform.mac_ver()[0]
+                j.require(old_platform.get('os') == new_platform.get('os') == j.nd.PLATFORM and
                           all(isinstance(value, str) and re.fullmatch(r'[0-9]+(?:\.[0-9]+){1,2}', value)
                               for value in (old_os, new_os, current_os)) and new_os == current_os,
                           'Unreviewed native save OS provenance change')
@@ -950,9 +956,10 @@ def verify_live(out):
     for item in record['media_dependencies']:
         j.require(j.nd.digest(Path(item['path'])) == item['sha256'], 'Edited-copy media dependency changed')
     j.require(j.files_manifest(Path(record['source'])) == record['source_files'], 'Source changed since snapshot')
-    root = j.read_json(j.nd.DRAFT_ROOT / 'root_meta_info.json')
+    root = j.read_json(j.nd.INDEX_ROOT / 'root_meta_info.json')
     entries = [r for r in root['all_draft_store'] if r.get('draft_id') == record['draft_id']]
-    j.require(len(entries) == 1 and entries[0]['draft_fold_path'] == str(target), 'Edit copy home registration differs')
+    j.require(len(entries) == 1 and entries[0]['draft_fold_path'] == j.nd.native_path(target),
+              'Edit copy home registration differs')
     return {'status': 'verified', 'draft': str(target), 'operations': len(record['operations']),
             'duration_us': actual['duration'], 'tracks': len(actual['tracks']), 'source_files_unchanged': True,
             'preserved_fields_verified': True, 'four_mirrors_equal': True, 'video_exported': False,

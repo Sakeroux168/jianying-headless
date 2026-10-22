@@ -53,7 +53,7 @@ def live_record(build):
 
 def expectations(build, record):
     """Canvas, frame rate, duration and audio the finished file must match."""
-    timeline = j.nd.helper()._decrypt_metadata_in_memory(build / 'draft/draft_info.json')
+    timeline = j.nd.helper()._decrypt_metadata_in_memory(build / 'draft' / j.nd.TIMELINE_FILE)
     compound.validate(timeline, edit.basic_validation)
     j.require(timeline.get('duration', 0) > 0 and timeline.get('tracks'), 'Cannot export an empty timeline')
     profile = record['runtime_profile']

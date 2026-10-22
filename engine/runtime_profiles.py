@@ -11,10 +11,13 @@ EXPORT_PROFILES = frozenset(PROFILE_PREFIX + v for v in ('11.5.0', '11.4.2'))
 # Deliverables rendered by the editor's own export dialog. This is a separate
 # evidence tier from EXPORT_PROFILES above: it needs no export ABI, proves
 # nothing about one, and its acceptance never carries over to that path.
-UI_EXPORT_PROFILES = frozenset((PROFILE_PREFIX + '11.6.0',))
+UI_EXPORT_PROFILES = frozenset((PROFILE_PREFIX + '11.6.0', 'jy14-headless-windows-11.6.0.14552'))
 # Captured draft resources are reviewed per runtime in the UI, independently of export ABIs.
-RESOURCE_PROFILES = frozenset(PROFILE_PREFIX + v for v in ('11.6.0', '11.5.0', '11.4.2'))
-EDIT_PROFILES = frozenset(PROFILE_PREFIX + v for v in ('11.6.0', '11.5.0', '11.4.2', '11.4.0'))
+RESOURCE_PROFILES = frozenset([PROFILE_PREFIX + v for v in ('11.6.0', '11.5.0', '11.4.2')]
+                              # Windows cache packages are byte-identical to the 11.4.2 capture.
+                              + ['jy14-headless-windows-11.6.0.14552'])
+EDIT_PROFILES = frozenset([PROFILE_PREFIX + v for v in ('11.6.0', '11.5.0', '11.4.2', '11.4.0')]
+                          + ['jy14-headless-windows-11.6.0.14552'])
 RESOURCE_CAPTURE_PROFILE = PROFILE_PREFIX + '11.4.2'
 TIMELINE_SCHEMAS = frozenset((('185.0.0', 360000), ('187.0.0', 360000), ('189.0.0', 360000)))
 # Windows installs: exact install version -> videoeditor.dll SHA-256. The DLL

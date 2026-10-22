@@ -181,6 +181,8 @@ def doctor():
 
 
 def validate_runtime():
+    if WINDOWS:
+        return validate_runtime_windows()
     before = doctor()
     env = {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'LC_ALL': 'C'}
     result = subprocess.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', str(APP)],

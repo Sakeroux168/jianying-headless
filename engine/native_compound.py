@@ -278,7 +278,7 @@ def wrap_all(timeline, name, target):
     owner = materials['drafts'][0]
     owner['draft'] = child
     for key, filename in SIDECARS.items():
-        owner[key] = str(target / 'subdraft' / child_id / filename)
+        owner[key] = j.nd.native_path(target / 'subdraft' / child_id / filename)
     video = materials['videos'][0]
     video.update(duration=child['duration'], material_name=name,
                  width=child['canvas_config']['width'], height=child['canvas_config']['height'])
