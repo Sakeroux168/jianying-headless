@@ -16,7 +16,7 @@ from runtime_profiles import validate_resource_profile
 
 HERE = Path(__file__).resolve().parent
 CATALOG_SHA = '97af2df27463a9183fb1aa8f2ef534b37a644cb196f340fe88fdc50b456abde9'
-WINDOWS_OVERLAY_SHA = 'f1a75f94566e11debf568666040e1673402a678a92239f5b739588889ce5c9a6'
+WINDOWS_OVERLAY_SHA = '0f4d10836287557ffdecb7485d0e3ae52cf8b9021a5fa651a1b1d3179c139336'
 SHAPES = ('circle', 'rectangle', 'line', 'mirror', 'star', 'heart')
 
 
