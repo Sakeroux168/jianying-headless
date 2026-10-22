@@ -100,6 +100,13 @@ python skills\yichen-jianying-edit\scripts\headless_draft.py <命令>
    - 已验收：摇镜、左移弹动、模糊放大、推远 II、无缝转场、聚光灯、渐渐放大、多屏球形、
      火光包围、流光暗角、抖动放大（11 个），保存后回读通过。
 
+10. Openverse 免费音效（skills/yichen-jianying-edit/scripts/openverse_sfx.py）
+   Windows 上已跑通：search（只搜索）和 add（搜索 → 下载 → 调音量 → 写进计划的音效轨 → 生成 credits.md 许可说明）。
+   用法：口播计划 sfx 里写 {"source_time": 秒, "openverse": "英文关键词"} → compile → from-compiled
+   → openverse_sfx.py add → build。商用视频加 --commercial（只用 CC0 / CC BY）。
+   cdn.freesound.org 在这台电脑上较慢，偶发 SSLError；换一个新的 --work 目录重跑即可。
+   尚未在剪映里试听验收。
+
 
 ## 五、未完成
 
